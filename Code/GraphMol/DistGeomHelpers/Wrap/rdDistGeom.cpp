@@ -258,7 +258,7 @@ python::tuple getExpTorsHelper(const RDKit::ROMol &mol, bool useExpTorsions,
   ForceFields::CrystalFF::getExperimentalTorsions(
       mol, details, torsionBonds, useExpTorsions, useSmallRingTorsions,
       useMacrocycleTorsions, useBasicKnowledge, version, verbose);
-  python::list result;
+  python::list  torsionBondList;
   for (const auto &pr : torsionBonds) {
     python::dict d;
     d["bondIndex"] = std::get<0>(pr);
@@ -267,9 +267,89 @@ python::tuple getExpTorsHelper(const RDKit::ROMol &mol, bool useExpTorsions,
     d["V"] = std::get<2>(pr)->V;
     d["signs"] = std::get<2>(pr)->signs;
     d["atomIndices"] = std::get<1>(pr);
-    result.append(d);
+    torsionBondList.append(d);
   }
-  return python::tuple(result);
+
+  python::dict detailsDict;
+  // Adding expTorsionAtoms
+  python::list expTorsionAtomsList;
+  for (const auto &atoms : details.expTorsionAtoms) {
+    python::list atomList;
+    for (int atom : atoms) {
+      atomList.append(atom);
+    }
+    expTorsionAtomsList.append(atomList);
+  }
+  detailsDict["expTorsionAtoms"] = expTorsionAtomsList;
+
+  // Adding expTorsionAngles
+  python::list expTorsionAnglesList;
+  for (const auto &anglePair : details.expTorsionAngles) {
+    python::dict angleDict;
+    python::list angleAtomsList, angleValuesList;
+    for (int atom : anglePair.first) {
+      angleAtomsList.append(atom);
+    }
+    for (double value : anglePair.second) {
+      angleValuesList.append(value);
+    }
+    angleDict["signs"] = angleAtomsList;
+    angleDict["values"] = angleValuesList;
+    expTorsionAnglesList.append(angleDict);
+  }
+  detailsDict["expTorsionAngles"] = expTorsionAnglesList;
+
+  // Adding improperAtoms
+  python::list improperAtomsList;
+  for (const auto &atoms : details.improperAtoms) {
+    python::list atomList;
+    for (int atom : atoms) {
+      atomList.append(atom);
+    }
+    improperAtomsList.append(atomList);
+  }
+  detailsDict["improperAtoms"] = improperAtomsList;
+
+  // Adding bonds
+  python::list bondsList;
+  for (const auto &bondPair : details.bonds) {
+    python::list bondList;
+    bondList.append(bondPair.first);
+    bondList.append(bondPair.second);
+    bondsList.append(bondList);
+  }
+  detailsDict["bonds"] = bondsList;
+
+  // Adding angles
+  python::list anglesList;
+  for (const auto &angle : details.angles) {
+    python::list angleList;
+    for (int atom : angle) {
+      angleList.append(atom);
+    }
+    anglesList.append(angleList);
+  }
+  detailsDict["angles"] = anglesList;
+
+  // Adding atomNums
+  python::list atomNumsList;
+  for (int num : details.atomNums) {
+    atomNumsList.append(num);
+  }
+  detailsDict["atomNums"] = atomNumsList;
+
+  // Adding boundsMatForceScaling
+  detailsDict["boundsMatForceScaling"] = details.boundsMatForceScaling;
+
+  // Adding constrainedAtoms
+  python::list constrainedAtomsList;
+  for (size_t i = 0; i < details.constrainedAtoms.size(); ++i) {
+    constrainedAtomsList.append(details.constrainedAtoms[i]);
+  }
+  detailsDict["constrainedAtoms"] = constrainedAtomsList;
+
+  // Return as tuple
+  return python::make_tuple(torsionBondList, detailsDict);
 }
 
 python::tuple getExpTorsHelperWithParams(
